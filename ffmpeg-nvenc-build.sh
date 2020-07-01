@@ -5,6 +5,7 @@
 
 # Based on:  https://trac.ffmpeg.org/wiki/CompilationGuide/Ubuntu
 # Based on:  https://gist.github.com/Brainiarc7/3f7695ac2a0905b05c5b
+# Fix #1 By : Chromafunk : https://github.com/ilyaevseev/ffmpeg-build/commit/d3538fd5ac0063eda4c1887ee9509f36d05e7514
 # Rewritten here: https://github.com/ilyaevseev/ffmpeg-build-static/
 
 
@@ -42,14 +43,14 @@ Clone() {
     git pull
 }
 
-PKGS="autoconf automake libtool patch make cmake bzip2 unzip wget git mercurial cmake3"
+PKGS="autoconf automake libtool patch make cmake bzip2 unzip wget git mercurial cmake"
 
 installAptLibs() {
     sudo apt-get update
     sudo apt-get -y --force-yes install $PKGS \
       build-essential pkg-config texi2html software-properties-common \
       libfreetype6-dev libgpac-dev libsdl1.2-dev libtheora-dev libva-dev \
-      libvdpau-dev libvorbis-dev libxcb1-dev libxcb-shm0-dev libxcb-xfixes0-dev zlib1g-dev
+      libvdpau-dev libvorbis-dev libxcb1-dev libxcb-shm0-dev libxcb-xfixes0-dev zlib1g-dev libfribidi-dev
 }
 
 installYumLibs() {
@@ -132,9 +133,9 @@ compileYasm() {
 compileLibX264() {
     echo "Compiling libx264"
     cd "$WORK_DIR/"
-    Wget http://download.videolan.org/pub/x264/snapshots/last_x264.tar.bz2
+    Wget https://download.videolan.org/pub/x264/snapshots/x264-snapshot-20191216-2245.tar.bz2
     rm -rf x264-snapshot*/ || :
-    tar xjvf last_x264.tar.bz2
+    tar xjvf x264-snapshot-20191216-2245.tar.bz2
     cd x264-snapshot*
     ./configure --prefix="$DEST_DIR" --bindir="$DEST_DIR/bin" --enable-static --enable-pic
     Make install distclean
@@ -162,7 +163,7 @@ compileLibAom() {
     Clone https://aomedia.googlesource.com/aom
     mkdir ../aom_build
     cd ../aom_build
-    which cmake3 && PROG=cmake3 || PROG=cmake
+    which cmake && PROG=cmake || PROG=cmake
     $PROG -G "Unix Makefiles" -DCMAKE_INSTALL_PREFIX="$DEST_DIR" -DENABLE_SHARED=off -DENABLE_NASM=on ../aom
     Make install
 }
@@ -220,6 +221,50 @@ compileLibAss() {
     Make install distclean
 }
 
+compileLibOgg() {
+    echo "Compiling libogg"
+    cd "$WORK_DIR/"
+    Wget "https://github.com/libass/libass/releases/download/$LASS_VERSION/libass-$LASS_VERSION.tar.xz"
+    tar Jxvf "libass-$LASS_VERSION.tar.xz"
+    cd "libass-$LASS_VERSION"
+    autoreconf -fiv
+    ./configure --prefix="$DEST_DIR" --disable-shared
+    Make install distclean
+}
+
+compileLibVorbis() {
+    echo "Compiling libvorbis"
+    cd "$WORK_DIR/"
+    Wget "https://github.com/libass/libass/releases/download/$LASS_VERSION/libass-$LASS_VERSION.tar.xz"
+    tar Jxvf "libass-$LASS_VERSION.tar.xz"
+    cd "libass-$LASS_VERSION"
+    autoreconf -fiv
+    ./configure --prefix="$DEST_DIR" --disable-shared
+    Make install distclean
+}
+
+compileLibRtmp() {
+    echo "Compiling libass"
+    cd "$WORK_DIR/"
+    Wget "https://github.com/libass/libass/releases/download/$LASS_VERSION/libass-$LASS_VERSION.tar.xz"
+    tar Jxvf "libass-$LASS_VERSION.tar.xz"
+    cd "libass-$LASS_VERSION"
+    autoreconf -fiv
+    ./configure --prefix="$DEST_DIR" --disable-shared
+    Make install distclean
+}
+
+compileNvidiaSdk() {
+    echo "Compiling nv_sdk"
+    cd "$WORK_DIR/"
+    Wget "https://github.com/libass/libass/releases/download/$LASS_VERSION/libass-$LASS_VERSION.tar.xz"
+    tar Jxvf "libass-$LASS_VERSION.tar.xz"
+    cd "libass-$LASS_VERSION"
+    autoreconf -fiv
+    ./configure --prefix="$DEST_DIR" --disable-shared
+    Make install distclean
+}
+
 compileFfmpeg(){
     echo "Compiling ffmpeg"
     Clone https://github.com/FFmpeg/FFmpeg -b master
@@ -230,9 +275,10 @@ compileFfmpeg(){
       --pkg-config-flags="--static" \
       --prefix="$DEST_DIR" \
       --bindir="$DEST_DIR/bin" \
-      --extra-cflags="-I $DEST_DIR/include -I $CUDA_DIR/include/" \
-      --extra-ldflags="-L $DEST_DIR/lib -L $CUDA_DIR/lib64/" \
+      --extra-cflags="-I $DEST_DIR/include -I $CUDA_DIR/include/ I$DEST_DIR/nv_sdk" \
+      --extra-ldflags="-L $DEST_DIR/lib -L $CUDA_DIR/lib64/ -L$DEST_DIR/nv_sdk" \
       --extra-libs="-lpthread" \
+      --extra-version="PandawaX" \
       --enable-cuda \
       --enable-cuda-sdk \
       --enable-cuvid \
@@ -270,8 +316,8 @@ compileLibfdkcc
 compileLibMP3Lame
 compileLibOpus
 compileLibAss
-# TODO: libogg
-# TODO: libvorbis
+compileLibOgg
+compileLibVorbis
 compileFfmpeg
 
 echo "Complete!"
