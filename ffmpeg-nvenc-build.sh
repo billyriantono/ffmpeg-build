@@ -18,8 +18,8 @@ LASS_VERSION="0.14.0"
 CUDA_VERSION="10.0.130-1"
 CUDA_REPO_KEY="http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/7fa2af80.pub"
 CUDA_DIR="/usr/local/cuda"
-WORK_DIR="$HOME/ffmpeg-build-static-sources"
-DEST_DIR="$HOME/ffmpeg-build-static-binaries"
+WORK_DIR="$HOME/ffmpeg-xc-build-static-sources"
+DEST_DIR="$HOME/ffmpeg-xc-build-static-binaries"
 
 mkdir -p "$WORK_DIR" "$DEST_DIR" "$DEST_DIR/bin"
 
