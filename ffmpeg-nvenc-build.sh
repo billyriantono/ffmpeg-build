@@ -50,7 +50,8 @@ installAptLibs() {
     sudo apt-get -y --force-yes install $PKGS \
       build-essential pkg-config texi2html software-properties-common \
       libfreetype6-dev libgpac-dev libsdl1.2-dev libtheora-dev libva-dev \
-      libvdpau-dev libvorbis-dev libxcb1-dev libxcb-shm0-dev libxcb-xfixes0-dev zlib1g-dev libfribidi-dev
+      libvdpau-dev libvorbis-dev libxcb1-dev libxcb-shm0-dev libxcb-xfixes0-dev zlib1g-dev libfribidi-dev \
+      gnutls-dev libharfbuzz-dev
 }
 
 installYumLibs() {
@@ -224,50 +225,50 @@ compileLibAss() {
 compileLibOgg() {
     echo "Compiling libogg"
     cd "$WORK_DIR/"
-    Wget "https://github.com/libass/libass/releases/download/$LASS_VERSION/libass-$LASS_VERSION.tar.xz"
-    tar Jxvf "libass-$LASS_VERSION.tar.xz"
-    cd "libass-$LASS_VERSION"
-    autoreconf -fiv
-    ./configure --prefix="$DEST_DIR" --disable-shared
+    Wget "https://github.com/xiph/ogg/archive/v1.3.3.tar.gz" -O "libogg.tar.gz"
+    tar zxvf "libogg.tar.gz"
+    cd "ogg*"
+    ./autogen.sh
+    ./configure --prefix=$DEST_DIR --disable-shared
     Make install distclean
 }
 
 compileLibVorbis() {
     echo "Compiling libvorbis"
     cd "$WORK_DIR/"
-    Wget "https://github.com/libass/libass/releases/download/$LASS_VERSION/libass-$LASS_VERSION.tar.xz"
-    tar Jxvf "libass-$LASS_VERSION.tar.xz"
-    cd "libass-$LASS_VERSION"
-    autoreconf -fiv
+    Wget "https://github.com/xiph/vorbis/archive/v1.3.6.tar.gz" -O "vorbis.tar.gz"
+    tar zxvf "vorbis.tar.gz"
+    cd "vorbis"
+    ./autogen.sh
     ./configure --prefix="$DEST_DIR" --disable-shared
     Make install distclean
 }
 
 compileLibRtmp() {
-    echo "Compiling libass"
+    echo "Compiling librtmp"
     cd "$WORK_DIR/"
-    Wget "https://github.com/libass/libass/releases/download/$LASS_VERSION/libass-$LASS_VERSION.tar.xz"
-    tar Jxvf "libass-$LASS_VERSION.tar.xz"
-    cd "libass-$LASS_VERSION"
-    autoreconf -fiv
-    ./configure --prefix="$DEST_DIR" --disable-shared
-    Make install distclean
+    Wget "https://rtmpdump.mplayerhq.hu/download/rtmpdump-2.3.tgz"
+    tar zxvf "rtmpdump-2.3.tgz"
+    cd "rtmpdump-*"
+    cd librtmp
+    sed -i "/INC=.*/d" ./Makefile # Remove INC if present from previous run.
+    sed -i "s/prefix=.*/prefix=${DEST_DIR}\nINC=-I\$(prefix)\/include/" ./Makefile
+    sed -i "s/SHARED=.*/SHARED=no/" ./Makefile
+    make install_base
 }
 
 compileNvidiaSdk() {
     echo "Compiling nv_sdk"
-    cd "$WORK_DIR/"
-    Wget "https://github.com/libass/libass/releases/download/$LASS_VERSION/libass-$LASS_VERSION.tar.xz"
-    tar Jxvf "libass-$LASS_VERSION.tar.xz"
-    cd "libass-$LASS_VERSION"
-    autoreconf -fiv
-    ./configure --prefix="$DEST_DIR" --disable-shared
-    Make install distclean
+    cd $DEST_DIR
+    wget -c https://s3-us-west-1.amazonaws.com/backups.reticulum-dev-7f8d39c45878ee2e/streaming-deps/Video_Codec_SDK_8.2.16.zip
+    unzip Video_Codec_SDK_8.2.16.zip
+    sudo cp -vr Video_Codec_SDK_8.2.16/Samples/External/* /usr/include/
+    mv Video_Codec_SDK_8.2.16 nv_sdk
 }
 
 compileFfmpeg(){
     echo "Compiling ffmpeg"
-    Clone https://github.com/FFmpeg/FFmpeg -b master
+    Clone https://github.com/XtreamCodes/FFmpeg -b master
 
     export PATH="$CUDA_DIR/bin:$PATH"  # ..path to nvcc
     PKG_CONFIG_PATH="$DEST_DIR/lib/pkgconfig:$DEST_DIR/lib64/pkgconfig" \
@@ -279,8 +280,7 @@ compileFfmpeg(){
       --extra-ldflags="-L $DEST_DIR/lib -L $CUDA_DIR/lib64/ -L$DEST_DIR/nv_sdk" \
       --extra-libs="-lpthread" \
       --extra-version="PandawaX" \
-      --enable-cuda \
-      --enable-cuda-sdk \
+      --enable-cuda-llvm \
       --enable-cuvid \
       --enable-libnpp \
       --enable-gpl \
@@ -297,7 +297,23 @@ compileFfmpeg(){
       --enable-libx265 \
       --enable-nonfree \
       --enable-libaom \
-      --enable-nvenc
+      --enable-nvenc \
+      --enable-gnutls \
+      --disable-debug \
+      --disable-shared \
+      --disable-ffplay \
+      --disable-doc \
+      --enable-librtmp \
+      --enable-gpl \
+      --enable-pthreads \
+      --enable-postproc \
+      --enable-version3 \
+      --enable-gray \
+      --enable-runtime-cpudetect \
+      --enable-libfreetype \
+      --enable-fontconfig \
+      --enable-libfreetype \
+      --enable-static \
     Make install distclean
     hash -r
 }
@@ -318,6 +334,7 @@ compileLibOpus
 compileLibAss
 compileLibOgg
 compileLibVorbis
+ompileLibRtmp
 compileFfmpeg
 
 echo "Complete!"
