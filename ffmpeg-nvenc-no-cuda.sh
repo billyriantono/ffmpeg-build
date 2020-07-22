@@ -15,9 +15,6 @@ YASM_VERSION="1.3.0"
 LAME_VERSION="3.100"
 OPUS_VERSION="1.2.1"
 LASS_VERSION="0.14.0"
-CUDA_VERSION="10.0.130-1"
-CUDA_REPO_KEY="http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1604/x86_64/7fa2af80.pub"
-CUDA_DIR="/usr/local/cuda"
 WORK_DIR="$HOME/ffmpeg-xc-build-static-sources"
 DEST_DIR="$HOME/ffmpeg-xc-build-static-binaries"
 
@@ -51,7 +48,7 @@ installAptLibs() {
       build-essential pkg-config texi2html software-properties-common \
       libfreetype6-dev libgpac-dev libsdl1.2-dev libtheora-dev libva-dev \
       libvdpau-dev libvorbis-dev libxcb1-dev libxcb-shm0-dev libxcb-xfixes0-dev zlib1g-dev libfribidi-dev \
-      gnutls-dev libharfbuzz-dev
+      gnutls-dev libharfbuzz-dev libxml2-dev
 }
 
 installYumLibs() {
@@ -65,40 +62,6 @@ installLibs() {
     case "$ID" in
         ubuntu | linuxmint ) installAptLibs ;;
         * )                  installYumLibs ;;
-    esac
-}
-
-installCUDASDKdeb() {
-    UBUNTU_VERSION="$1"
-    local CUDA_REPO_URL="https://developer.download.nvidia.com/compute/cuda/repos/ubuntu${UBUNTU_VERSION}/x86_64/cuda-repo-ubuntu1804_${CUDA_VERSION}_amd64.deb"
-    Wget "$CUDA_REPO_URL"
-    sudo dpkg -i "$(basename "$CUDA_REPO_URL")"
-    sudo apt-key adv --fetch-keys "$CUDA_REPO_KEY"
-    sudo apt-get -y update
-    sudo apt-get -y install cuda
-
-    sudo env LC_ALL=C.UTF-8 add-apt-repository -y ppa:graphics-drivers/ppa
-    sudo apt-get -y update
-    sudo apt-get -y upgrade
-}
-
-installCUDASDKyum() {
-    rpm -q cuda-repo-rhel7 2>/dev/null ||
-       sudo yum install -y "https://developer.download.nvidia.com/compute/cuda/repos/rhel7/x86_64/cuda-repo-rhel7-${CUDA_VERSION}.x86_64.rpm"
-    sudo yum install -y cuda
-}
-
-installCUDASDK() {
-    echo "Installing CUDA and the latest driver repositories from repositories"
-    cd "$WORK_DIR/"
-
-    . /etc/os-release
-    case "$ID-$VERSION_ID" in
-        ubuntu-16.04 ) installCUDASDKdeb 1604 ;;
-        ubuntu-18.04 ) installCUDASDKdeb 1804 ;;
-        linuxmint-19.1)installCUDASDKdeb 1804 ;;
-        centos-7     ) installCUDASDKyum ;;
-        * ) echo "ERROR: only CentOS 7, Ubuntu 16.04 or 18.04 are supported now."; exit 1;;
     esac
 }
 
@@ -280,13 +243,12 @@ compileFfmpeg(){
       --extra-ldflags="-L $DEST_DIR/lib -L $CUDA_DIR/lib64/ -L$DEST_DIR/nv_sdk" \
       --extra-libs="-lpthread" \
       --extra-version="PandawaX" \
-      --enable-cuda-llvm \
       --enable-cuvid \
-      --enable-libnpp \
+       --enable-nvenc \
+       --enable-ffnvcodec \
       --enable-gpl \
       --enable-libass \
       --enable-libfdk-aac \
-      --enable-vaapi \
       --enable-libfreetype \
       --enable-libmp3lame \
       --enable-libopus \
@@ -315,13 +277,12 @@ compileFfmpeg(){
       --enable-libfreetype \
       --enable-static \
       --enable-demuxer=dash \
-        --enable-libxml2 \
+      --enable-libxml2 \
     make install distclean
     hash -r
 }
 
 installLibs
-#installCUDASDK
 installNvidiaSDK
 
 compileNasm
